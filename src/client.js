@@ -3,6 +3,7 @@ const aws4 = require('aws4');
 const assert = require('assert');
 const urllib = require('urllib');
 const qs = require('querystring');
+const HttpsError = require('http-errors');
 
 class Client {
   /**
@@ -34,13 +35,34 @@ class Client {
    * @param {Object} options
    * @param {Undefined|Object} options.userParams 金山云接口所需的参数，这里面可以不传 Action 和 Version
    * @param {Undefined|Object} [options.headers] http headers
+   * @param {Undefined|Booolean} [options.raw] 是否返回原生信息
    */
   async request(action, options = {}) {
+    const raw = options.raw;
     options = _.assign(options, this._getApi(action));
     options = this._handleRequest(action, options);
     options.timeout = [3000, 60000]; // 连接超时 3s，响应超时 60s
 
-    return urllib.request(options.url, options);
+    // eslint-disable-next-line no-unused-vars
+    let res = await urllib.request(options.url, options).catch(unusedError => {
+      throw new HttpsError(500);
+    });
+    if (raw) {
+      return res;
+    }
+
+    res = res.res;
+    if (res.status === -1 || res.status === -2) {
+      throw new HttpsError(res.status, res.statusMessage);
+    }
+    if (res.status > 399) {
+      throw new HttpsError(res.status, _.get(res, 'data.Error.Message', res.statusMessage), res.data);
+    }
+
+    if (res.data.Data.RetCode !== 0) {
+      throw new HttpsError(400, res.data.Data.RetMsg, res.data);
+    }
+    return res.data;
   }
 
   /**
