@@ -100,10 +100,9 @@ class Client {
       } else {
         options.body = JSON.stringify(options.userParams);
       }
-      options.path = url.pathname + '?' + qs.stringify(query);
-
     }
 
+    options.path = url.pathname + '?' + qs.stringify(query);
     options = _.pick(options, ['method', 'host', 'path', 'headers', 'body', 'region', 'service']);
     options = aws4.sign(options, {
       secretAccessKey: this.secretAccessKey,
