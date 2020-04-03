@@ -32,16 +32,29 @@ class Client {
   /**
    * http request 方法
    * @param {String} action 接口操作名
+   * @param {Undefined|Object} userParams 金山云接口所需的参数，这里面可以不传 Action 和 Version
    * @param {Object} options
-   * @param {Undefined|Object} options.userParams 金山云接口所需的参数，这里面可以不传 Action 和 Version
    * @param {Undefined|Object} [options.headers] http headers
    * @param {Undefined|Booolean} [options.raw] 是否返回原生信息
+   * @param {Undefined|Array} [options.timeout] timeout 超时时间
    */
-  async request(action, options = {}) {
+  async request(action, userParams, options = {}) {
+    assert(!userParams || _.isPlainObject(userParams), 'userParams must be json type or undefined');
+    options = _.defaultsDeep(options, {
+      method: 'GET',
+      host: this.host,
+      path: '/',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: '',
+      region: this.region,
+      service: this.service,
+      timeout: [3000, 60000], // 连接超时 3s，响应超时 60s
+    });
+
     const raw = options.raw;
-    options = _.assign(options, this._getApi(action));
-    options = this._handleRequest(action, options);
-    options.timeout = [3000, 60000]; // 连接超时 3s，响应超时 60s
+    options = this._handleRequest(action, userParams, options);
 
     // eslint-disable-next-line no-unused-vars
     let res = await urllib.request(options.url, options).catch(unusedError => {
@@ -66,39 +79,30 @@ class Client {
   }
 
   /**
-   * 处理请求参数，并生成签名
+   * 处理请求参数，并返回可以通过金山云授权的请求参数
    * @param {String} action 接口操作名
    * @param {Object} options
-   * @param {Undefined|Object} options.userParams 金山云接口所需的参数，这里面可以不传 Action 和 Version
+   * @param {Undefined|Object} userParams 金山云接口所需的参数，这里面可以不传 Action 和 Version
    * @param {String} [options.method] http method, 默认是 GET
    * @param {String} [options.path] 金山云接口请求地址, 默认是 /
    * @param {Undefined|Object} [options.headers] http headers
+   * @param {Undefined|Array} [options.timeout] timeout 超时时间
    * @return {Object}
    */
-  _handleRequest(action, options = {}) {
-    assert(!options.userParams || _.isPlainObject(options.userParams), 'options.userParams must be json type or undefined'); // eslint-disable-line max-len
-    options = _.defaultsDeep(options, {
-      method: 'GET',
-      host: this.host,
-      path: '/',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: '',
-      region: this.region,
-      service: this.service,
-    });
+  _handleRequest(action, userParams, options = {}) {
+    const timeout = options.timeout;
+    options = _.assign(options, this._getApi(action));
 
     const url = require('url').parse(this.endpoint + options.path);
     let query = qs.parse(url.query);
     query.Action = action;
     query.Version = this.Version;
 
-    if (options.userParams) {
+    if (userParams) {
       if (options.method === 'GET') {
-        query = _.assign(query, options.userParams);
+        query = _.assign(query, userParams);
       } else {
-        options.body = JSON.stringify(options.userParams);
+        options.body = JSON.stringify(userParams);
       }
     }
 
@@ -109,9 +113,11 @@ class Client {
       accessKeyId: this.accessKeyId,
     });
 
+    // 兼容 urllib
     options.url = this.endpoint + options.path;
     options.content = options.body;
     options.dataType = 'json';
+    options.timeout = timeout;
 
     return options;
   }
@@ -123,8 +129,6 @@ class Client {
    */
   _getApi(action) {
     switch (action) {
-      case 'ListRealtimeStreamsInfo':
-        return {method: 'POST', path: '/api/ListRealtimeStreamsInfo/2017-01-01'};
       case 'ListRealtimePubStreamsInfo':
       case 'ListHistoryPubStreamsInfo':
       case 'ListHistoryPubStreamsErrInfo':
@@ -134,11 +138,21 @@ class Client {
       case 'ListRecordingTasks':
       case 'ListHistoryRecordTasks':
       case 'GetRecordTask':
-        return {};
+        return {method: 'GET', path: '/'};
       case 'ForbidStream':
-        return {method: 'POST'};
+        return {method: 'POST', path: '/'};
       case 'ResumeStream':
         return {method: 'POST', path: '/api/ResumeStream/2017-01-01'};
+      case 'ListRealtimeStreamsInfo':
+        return {method: 'POST', path: '/api/ListRealtimeStreamsInfo/2017-01-01'};
+      case 'CreateRecordTask':
+        return {method: 'POST', path: '/api/CreateRecordTask/2017-01-01'};
+      case 'CancelRecordTask':
+        return {method: 'POST', path: '/api/CancelRecordTask/2017-01-01'};
+      case 'StartStreamRecord':
+        return {method: 'POST', path: '/api/StartStreamRecord/2017-01-01'};
+      case 'StopStreamRecord':
+        return {method: 'POST', path: '/api/StopStreamRecord/2017-01-01'};
       default:
         assert(false, 'invalid "action"');
     }
