@@ -1,20 +1,11 @@
 module.exports = {
   "env": {
     "node": true,
-    "mocha": true,
     "es6": true,
   },
   "parserOptions": {
     "sourceType": "module",
-    "ecmaVersion": 8,
-    "ecmaFeatures": {
-      "experimentalObjectRestSpread": true
-    },
-  },
-  "globals": {
-    "Promise": true,
-    "api": true,
-    "socket": true
+    "ecmaVersion": 9,
   },
   "rules": {
     "array-bracket-spacing": 0,
