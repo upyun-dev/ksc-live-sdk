@@ -40,7 +40,7 @@ class Client {
    */
   async request(action, userParams, options = {}) {
     assert(!userParams || _.isPlainObject(userParams), 'userParams must be json type or undefined');
-    options = _.defaultsDeep(options, {
+    _.defaultsDeep(options, {
       method: 'GET',
       host: this.host,
       path: '/',
@@ -50,6 +50,8 @@ class Client {
       body: '',
       region: this.region,
       service: this.service,
+    });
+    _.defaults(options, {
       timeout: [3000, 60000], // 连接超时 3s，响应超时 60s
     });
 
