@@ -1,6 +1,6 @@
 {
   "name": "ksc-live-sdk",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "description": "金山云直播SDK",
   "main": "index.js",
   "scripts": {
