@@ -15,7 +15,7 @@ class Client {
     assert(config.secretAccessKey, 'must pass "config.secretAccessKey"');
 
     config = _.defaultsDeep(config, {
-      host: 'kls.api.ksyun.com',
+      host: 'kls.api.ksyuncs.com',
       region: 'cn-beijing-6',
     });
 
